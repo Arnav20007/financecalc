@@ -219,6 +219,34 @@ export function calculateDebtSnowball(debts, extraPayment = 0) {
     // Minimum payments only
     const minimumResult = simulatePayoff([...debts], 0);
 
+    // Normalize all three timelines to the same set of month checkpoints
+    // so Chart.js can render all lines with identical x-axis labels
+    const maxMonth = Math.max(
+        snowballResult.totalMonths,
+        avalancheResult.totalMonths,
+        minimumResult.totalMonths
+    );
+
+    // Build unified checkpoints: every 12 months + each method's final month
+    const checkpointSet = new Set();
+    for (let m = 12; m <= maxMonth; m += 12) {
+        checkpointSet.add(m);
+    }
+    checkpointSet.add(snowballResult.totalMonths);
+    checkpointSet.add(avalancheResult.totalMonths);
+    checkpointSet.add(minimumResult.totalMonths);
+    const checkpoints = [...checkpointSet].sort((a, b) => a - b);
+
+    // Re-sample each raw timeline to the unified checkpoints
+    snowballResult.timeline = sampleTimeline(snowballResult.rawTimeline, checkpoints);
+    avalancheResult.timeline = sampleTimeline(avalancheResult.rawTimeline, checkpoints);
+    minimumResult.timeline = sampleTimeline(minimumResult.rawTimeline, checkpoints);
+
+    // Clean up raw data
+    delete snowballResult.rawTimeline;
+    delete avalancheResult.rawTimeline;
+    delete minimumResult.rawTimeline;
+
     return {
         snowball: snowballResult,
         avalanche: avalancheResult,
@@ -228,6 +256,34 @@ export function calculateDebtSnowball(debts, extraPayment = 0) {
         timeSavedSnowball: minimumResult.totalMonths - snowballResult.totalMonths,
         timeSavedAvalanche: minimumResult.totalMonths - avalancheResult.totalMonths,
     };
+}
+
+/**
+ * Sample a raw monthly timeline at specific checkpoints.
+ * For months beyond the payoff month, balance is 0.
+ */
+function sampleTimeline(rawTimeline, checkpoints) {
+    return checkpoints.map(targetMonth => {
+        // Find the entry for this month, or the closest one before it
+        let entry = null;
+        for (let i = rawTimeline.length - 1; i >= 0; i--) {
+            if (rawTimeline[i].month <= targetMonth) {
+                entry = rawTimeline[i];
+                break;
+            }
+        }
+        // If the payoff already happened, balance is 0
+        const lastEntry = rawTimeline[rawTimeline.length - 1];
+        if (!entry || (lastEntry && targetMonth > lastEntry.month && lastEntry.totalBalance === 0)) {
+            return {
+                month: targetMonth,
+                totalBalance: 0,
+                totalInterest: lastEntry ? lastEntry.totalInterest : 0,
+                debtsRemaining: 0,
+            };
+        }
+        return { ...entry, month: targetMonth };
+    });
 }
 
 function simulatePayoff(debts, extraPayment) {
@@ -240,7 +296,7 @@ function simulatePayoff(debts, extraPayment) {
     let month = 0;
     let totalInterest = 0;
     let totalPaid = 0;
-    const timeline = [];
+    const rawTimeline = [];
 
     while (activeDebts.some(d => !d.paidOff) && month < 600) {
         month++;
@@ -281,14 +337,13 @@ function simulatePayoff(debts, extraPayment) {
         totalInterest += monthInterest;
         totalPaid += monthPaid;
 
-        if (month % 12 === 0 || !activeDebts.some(d => !d.paidOff)) {
-            timeline.push({
-                month,
-                totalBalance: Math.round(activeDebts.reduce((s, d) => s + d.currentBalance, 0) * 100) / 100,
-                totalInterest: Math.round(totalInterest * 100) / 100,
-                debtsRemaining: activeDebts.filter(d => !d.paidOff).length,
-            });
-        }
+        // Record every month for accurate resampling
+        rawTimeline.push({
+            month,
+            totalBalance: Math.round(activeDebts.reduce((s, d) => s + d.currentBalance, 0) * 100) / 100,
+            totalInterest: Math.round(totalInterest * 100) / 100,
+            debtsRemaining: activeDebts.filter(d => !d.paidOff).length,
+        });
     }
 
     return {
@@ -296,7 +351,8 @@ function simulatePayoff(debts, extraPayment) {
         totalYears: Math.round((month / 12) * 10) / 10,
         totalInterest: Math.round(totalInterest * 100) / 100,
         totalPaid: Math.round(totalPaid * 100) / 100,
-        timeline,
+        rawTimeline,
+        timeline: [], // will be filled by normalization in calculateDebtSnowball
         payoffOrder: debts.map(d => d.name),
     };
 }

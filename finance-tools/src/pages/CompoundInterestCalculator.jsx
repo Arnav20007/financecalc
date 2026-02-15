@@ -11,9 +11,12 @@ import TryNextCalculator from '../components/common/TryNextCalculator';
 import InternalLinks from '../components/common/InternalLinks';
 import AdSlot from '../components/common/AdSlot';
 import ShareButton from '../components/common/ShareButton';
+import ValidatedInput from '../components/common/ValidatedInput';
+import PrivacyBadge from '../components/common/PrivacyBadge';
 import { calculateCompoundInterest } from '../utils/calculations';
 import { formatCurrency } from '../utils/formatters';
 import { generatePDF } from '../utils/pdfGenerator';
+import { useValidatedInputs } from '../utils/useValidatedInput';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler);
 
@@ -26,32 +29,42 @@ const faqs = [
     { question: 'Are the results of this calculator guaranteed?', answer: 'No. This calculator provides estimates based on a constant rate of return. Real-world investment returns vary from year to year and are not guaranteed. The results are for educational and planning purposes only. Consult a qualified financial advisor for personalized investment advice.' },
 ];
 
+const validationRules = {
+    principal: { label: 'Initial Investment', min: 0, max: 100000000, required: true },
+    monthly: { label: 'Monthly Contribution', min: 0, max: 1000000, required: true },
+    rate: { label: 'Annual Interest Rate', min: 0, max: 50, allowDecimal: true, required: true },
+    years: { label: 'Investment Period', min: 1, max: 100, allowDecimal: false, required: true },
+};
+
 export default function CompoundInterestCalculator() {
-    const [inputs, setInputs] = useState({ principal: 10000, monthly: 500, rate: 7, years: 20 });
+    const { values: inputs, errors, touched, handleChange, handleBlur, validateAll, getNumericValue } = useValidatedInputs(
+        { principal: '10000', monthly: '500', rate: '7', years: '20' },
+        validationRules
+    );
     const [results, setResults] = useState(null);
     const [compareMode, setCompareMode] = useState(false);
-    const [compareInputs, setCompareInputs] = useState({ principal: 10000, monthly: 500, rate: 10, years: 20 });
+    const [compareInputs, setCompareInputs] = useState({ principal: '10000', monthly: '500', rate: '10', years: '20' });
     const [compareResults, setCompareResults] = useState(null);
     const resultsRef = useRef(null);
 
     const handleCalculate = (e) => {
         e.preventDefault();
+        if (!validateAll()) return;
         const result = calculateCompoundInterest(
-            parseFloat(inputs.principal), parseFloat(inputs.monthly),
-            parseFloat(inputs.rate), parseInt(inputs.years)
+            getNumericValue('principal'), getNumericValue('monthly'),
+            getNumericValue('rate'), parseInt(inputs.years)
         );
         setResults(result);
         if (compareMode) {
             const cResult = calculateCompoundInterest(
-                parseFloat(compareInputs.principal), parseFloat(compareInputs.monthly),
-                parseFloat(compareInputs.rate), parseInt(compareInputs.years)
+                parseFloat(compareInputs.principal) || 0, parseFloat(compareInputs.monthly) || 0,
+                parseFloat(compareInputs.rate) || 0, parseInt(compareInputs.years) || 1
             );
             setCompareResults(cResult);
         }
         setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     };
 
-    const handleChange = (e) => setInputs({ ...inputs, [e.target.name]: e.target.value });
     const handleCompareChange = (e) => setCompareInputs({ ...compareInputs, [e.target.name]: e.target.value });
 
     const handleDownloadPDF = () => {
@@ -60,8 +73,8 @@ export default function CompoundInterestCalculator() {
             { label: 'Final Balance', value: formatCurrency(results.finalBalance) },
             { label: 'Total Contributions', value: formatCurrency(results.totalContributions) },
             { label: 'Total Interest Earned', value: formatCurrency(results.totalInterest) },
-            { label: 'Initial Principal', value: formatCurrency(inputs.principal) },
-            { label: 'Monthly Contribution', value: formatCurrency(inputs.monthly) },
+            { label: 'Initial Principal', value: formatCurrency(getNumericValue('principal')) },
+            { label: 'Monthly Contribution', value: formatCurrency(getNumericValue('monthly')) },
             { label: 'Annual Rate', value: `${inputs.rate}%` },
             { label: 'Time Period', value: `${inputs.years} years` },
         ], results.breakdown, [
@@ -79,23 +92,28 @@ export default function CompoundInterestCalculator() {
             {
                 label: 'Total Balance',
                 data: results.breakdown.map(r => r.balance),
-                borderColor: '#2563eb',
-                backgroundColor: 'rgba(37, 99, 235, 0.05)',
-                fill: true, tension: 0.3, pointRadius: 3,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                fill: true, tension: 0.4, pointRadius: 3,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: 'rgba(10, 14, 26, 0.8)',
+                pointBorderWidth: 2,
             },
             {
                 label: 'Total Contributions',
                 data: results.breakdown.map(r => r.totalContributions),
-                borderColor: '#94a3b8',
-                backgroundColor: 'rgba(148, 163, 184, 0.05)',
-                fill: true, tension: 0.3, pointRadius: 3, borderDash: [5, 5],
+                borderColor: '#64748b',
+                backgroundColor: 'rgba(100, 116, 139, 0.05)',
+                fill: true, tension: 0.4, pointRadius: 3, borderDash: [5, 5],
+                pointBackgroundColor: '#64748b',
             },
             ...(compareMode && compareResults ? [{
                 label: 'Scenario B Balance',
                 data: compareResults.breakdown.map(r => r.balance),
-                borderColor: '#7c3aed',
-                backgroundColor: 'rgba(124, 58, 237, 0.05)',
-                fill: false, tension: 0.3, pointRadius: 3, borderDash: [8, 4],
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                fill: false, tension: 0.4, pointRadius: 3, borderDash: [8, 4],
+                pointBackgroundColor: '#8b5cf6',
             }] : []),
         ],
     } : null;
@@ -104,11 +122,33 @@ export default function CompoundInterestCalculator() {
         labels: ['Total Contributions', 'Interest Earned'],
         datasets: [{
             data: [results.totalContributions, results.totalInterest],
-            backgroundColor: ['#e2e8f0', '#2563eb'],
-            borderColor: ['#fff', '#fff'],
-            borderWidth: 3,
+            backgroundColor: ['rgba(100, 116, 139, 0.3)', 'rgba(59, 130, 246, 0.7)'],
+            borderColor: ['rgba(100, 116, 139, 0.5)', 'rgba(59, 130, 246, 0.9)'],
+            borderWidth: 2,
+            hoverBackgroundColor: ['rgba(100, 116, 139, 0.5)', 'rgba(59, 130, 246, 0.9)'],
         }],
     } : null;
+
+    const chartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { color: '#94a3b8', padding: 16, usePointStyle: true, pointStyleWidth: 10 } },
+            tooltip: {
+                backgroundColor: 'rgba(15, 22, 41, 0.95)',
+                titleColor: '#f1f5f9',
+                bodyColor: '#94a3b8',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: { label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}` },
+            },
+        },
+        scales: {
+            y: { ticks: { callback: v => formatCurrency(v), color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'transparent' } },
+            x: { grid: { display: false }, ticks: { color: '#64748b' }, border: { color: 'transparent' } },
+        },
+    };
 
     return (
         <div className="calculator-page">
@@ -132,29 +172,37 @@ export default function CompoundInterestCalculator() {
                 </p>
             </section>
 
-            <form className="calculator-form" onSubmit={handleCalculate} id="compound-interest-form">
+            <form className="calculator-form" onSubmit={handleCalculate} id="compound-interest-form" noValidate>
                 <div className="form-grid">
-                    <div className="form-group">
-                        <label htmlFor="principal">Initial Investment <span className="label-hint">(USD)</span></label>
-                        <input id="principal" name="principal" type="number" className="form-input" value={inputs.principal} onChange={handleChange} min="0" step="100" required />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="monthly">Monthly Contribution <span className="label-hint">(USD)</span></label>
-                        <input id="monthly" name="monthly" type="number" className="form-input" value={inputs.monthly} onChange={handleChange} min="0" step="50" required />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="rate">Annual Interest Rate <span className="label-hint">(%)</span></label>
-                        <input id="rate" name="rate" type="number" className="form-input" value={inputs.rate} onChange={handleChange} min="0" max="50" step="0.1" required />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="years">Investment Period <span className="label-hint">(years)</span></label>
-                        <input id="years" name="years" type="number" className="form-input" value={inputs.years} onChange={handleChange} min="1" max="100" required />
-                    </div>
+                    <ValidatedInput
+                        name="principal" label="Initial Investment" hint="(USD)"
+                        value={inputs.principal} onChange={handleChange} onBlur={handleBlur}
+                        error={errors.principal} touched={touched.principal}
+                        prefix="$" min={0} step={100}
+                    />
+                    <ValidatedInput
+                        name="monthly" label="Monthly Contribution" hint="(USD)"
+                        value={inputs.monthly} onChange={handleChange} onBlur={handleBlur}
+                        error={errors.monthly} touched={touched.monthly}
+                        prefix="$" min={0} step={50}
+                    />
+                    <ValidatedInput
+                        name="rate" label="Annual Interest Rate" hint="(%)"
+                        value={inputs.rate} onChange={handleChange} onBlur={handleBlur}
+                        error={errors.rate} touched={touched.rate}
+                        suffix="%" min={0} max={50} step={0.1}
+                    />
+                    <ValidatedInput
+                        name="years" label="Investment Period" hint="(years)"
+                        value={inputs.years} onChange={handleChange} onBlur={handleBlur}
+                        error={errors.years} touched={touched.years}
+                        suffix="yrs" min={1} max={100}
+                    />
                 </div>
 
                 {compareMode && (
                     <>
-                        <h4 style={{ margin: '1.5rem 0 0.75rem', color: '#7c3aed' }}>Scenario B (Compare)</h4>
+                        <h4 style={{ margin: '1.5rem 0 0.75rem', color: '#8b5cf6' }}>Scenario B (Compare)</h4>
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>Initial Investment (B)</label>
@@ -179,6 +227,7 @@ export default function CompoundInterestCalculator() {
                 <button type="submit" className="btn-calculate" id="calculate-compound-interest" style={{ marginTop: '1.25rem' }}>
                     Calculate Compound Interest
                 </button>
+                <PrivacyBadge />
             </form>
 
             {results && (
@@ -194,7 +243,7 @@ export default function CompoundInterestCalculator() {
                         </div>
                         <div className="result-card success">
                             <div className="result-label">Interest Earned</div>
-                            <div className="result-value small" style={{ color: '#059669' }}>{formatCurrency(results.totalInterest)}</div>
+                            <div className="result-value small" style={{ color: '#10b981' }}>{formatCurrency(results.totalInterest)}</div>
                         </div>
                     </div>
 
@@ -217,28 +266,10 @@ export default function CompoundInterestCalculator() {
                         </div>
                     )}
 
-                    {/* Charts */}
                     <div className="chart-section">
                         <h3>Growth Projection</h3>
                         <div className="chart-container">
-                            <Line data={lineChartData} options={{
-                                responsive: true, maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { position: 'top' },
-                                    tooltip: {
-                                        callbacks: {
-                                            label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`,
-                                        },
-                                    },
-                                },
-                                scales: {
-                                    y: {
-                                        ticks: { callback: v => formatCurrency(v) },
-                                        grid: { color: 'rgba(0,0,0,0.04)' },
-                                    },
-                                    x: { grid: { display: false } },
-                                },
-                            }} />
+                            <Line data={lineChartData} options={chartOptions} />
                         </div>
                     </div>
 
@@ -246,12 +277,16 @@ export default function CompoundInterestCalculator() {
                         <h3>Contributions vs Interest</h3>
                         <div style={{ maxWidth: 300, margin: '0 auto' }}>
                             <Doughnut data={doughnutData} options={{
-                                responsive: true, plugins: {
-                                    legend: { position: 'bottom' },
+                                responsive: true,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 16 } },
                                     tooltip: {
-                                        callbacks: {
-                                            label: ctx => `${ctx.label}: ${formatCurrency(ctx.raw)}`,
-                                        },
+                                        backgroundColor: 'rgba(15, 22, 41, 0.95)',
+                                        titleColor: '#f1f5f9',
+                                        bodyColor: '#94a3b8',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        borderWidth: 1,
+                                        callbacks: { label: ctx => `${ctx.label}: ${formatCurrency(ctx.raw)}` },
                                     },
                                 },
                             }} />
@@ -260,21 +295,12 @@ export default function CompoundInterestCalculator() {
 
                     <AdSlot type="mid-content" />
 
-                    {/* Breakdown Table */}
                     <div className="data-table-wrapper">
-                        <div className="data-table-header">
-                            <h3>Year-by-Year Breakdown</h3>
-                        </div>
+                        <div className="data-table-header"><h3>Year-by-Year Breakdown</h3></div>
                         <div className="data-table-scroll">
                             <table className="data-table">
                                 <thead>
-                                    <tr>
-                                        <th>Year</th>
-                                        <th>Balance</th>
-                                        <th>Total Contributions</th>
-                                        <th>Yearly Interest</th>
-                                        <th>Total Interest</th>
-                                    </tr>
+                                    <tr><th>Year</th><th>Balance</th><th>Total Contributions</th><th>Yearly Interest</th><th>Total Interest</th></tr>
                                 </thead>
                                 <tbody>
                                     {results.breakdown.map(row => (
@@ -282,7 +308,7 @@ export default function CompoundInterestCalculator() {
                                             <td>{row.year}</td>
                                             <td><strong>{formatCurrency(row.balance)}</strong></td>
                                             <td>{formatCurrency(row.totalContributions)}</td>
-                                            <td style={{ color: '#059669' }}>+{formatCurrency(row.yearlyInterest)}</td>
+                                            <td style={{ color: '#10b981' }}>+{formatCurrency(row.yearlyInterest)}</td>
                                             <td>{formatCurrency(row.totalInterest)}</td>
                                         </tr>
                                     ))}
@@ -291,15 +317,14 @@ export default function CompoundInterestCalculator() {
                         </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="actions-bar">
                         <button className="btn-action" onClick={handleDownloadPDF} type="button">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7,10 12,15 17,10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                             Download PDF
                         </button>
-                        <ShareButton title="Compound Interest Results" text={`My investment of ${formatCurrency(inputs.principal)} could grow to ${formatCurrency(results.finalBalance)} in ${inputs.years} years!`} />
+                        <ShareButton title="Compound Interest Results" text={`My investment of ${formatCurrency(getNumericValue('principal'))} could grow to ${formatCurrency(results.finalBalance)} in ${inputs.years} years!`} />
                         <button className="btn-action" onClick={() => { setCompareMode(!compareMode); setCompareResults(null); }} type="button">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M21 3l-7 7" /><path d="M3 3l7 7" /><path d="M16 21h5v-5" /><path d="M8 21H3v-5" /><path d="M21 21l-7-7" /><path d="M3 21l7-7" /></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M21 3l-7 7" /><path d="M3 3l7 7" /></svg>
                             {compareMode ? 'Hide Compare' : 'Compare Scenarios'}
                         </button>
                     </div>
@@ -308,58 +333,27 @@ export default function CompoundInterestCalculator() {
 
             <InternalLinks currentPath="/compound-interest-calculator" />
 
-            {/* SEO Content */}
             <section className="seo-content">
                 <h2>How Does Compound Interest Work?</h2>
-                <p>
-                    Compound interest is one of the most powerful concepts in personal finance. Unlike simple interest, which is calculated only on the original principal amount, compound interest is calculated on the initial principal and also on the accumulated interest from previous periods. This creates an exponential growth curve that can turn even modest savings into significant wealth over time.
-                </p>
-                <p>
-                    The formula for compound interest is: A = P(1 + r/n)^(nt), where A is the final amount, P is the principal, r is the annual interest rate, n is the number of times interest compounds per year, and t is the number of years. Our calculator adds the complexity of regular monthly contributions, which significantly enhances the growth.
-                </p>
-
+                <p>Compound interest is one of the most powerful concepts in personal finance. Unlike simple interest, which is calculated only on the original principal amount, compound interest is calculated on the initial principal and also on the accumulated interest from previous periods. This creates an exponential growth curve that can turn even modest savings into significant wealth over time.</p>
+                <p>The formula for compound interest is: A = P(1 + r/n)^(nt), where A is the final amount, P is the principal, r is the annual interest rate, n is the number of times interest compounds per year, and t is the number of years. Our calculator adds the complexity of regular monthly contributions, which significantly enhances the growth.</p>
                 <h2>The Power of Starting Early</h2>
-                <p>
-                    Time is the most critical factor in compound interest. Consider this: an investor who starts at age 25 and invests $500 per month at 7% annual return until age 65 will accumulate approximately $1.2 million. An investor starting at age 35 with the same parameters will accumulate only about $567,000 — less than half. That's the cost of waiting 10 years. The earlier you start, the more time compound interest has to work its magic.
-                </p>
-                <p>
-                    This is why financial advisors consistently recommend starting to invest as early as possible, even if the amounts are small. A 22-year-old investing just $200 per month has a significant advantage over a 35-year-old investing $500 per month, assuming similar returns. Starting early isn't just good advice — it's mathematics.
-                </p>
-
+                <p>Time is the most critical factor in compound interest. Consider this: an investor who starts at age 25 and invests $500 per month at 7% annual return until age 65 will accumulate approximately $1.2 million. An investor starting at age 35 with the same parameters will accumulate only about $567,000 — less than half. That's the cost of waiting 10 years.</p>
                 <h2>Monthly Contributions vs. Lump Sum</h2>
-                <p>
-                    While lump sum investments have the advantage of maximizing time in the market, regular monthly contributions (also known as dollar-cost averaging) offer their own benefits. By investing a fixed amount regularly, you buy more shares when prices are low and fewer when they're high, potentially reducing the impact of market volatility on your portfolio.
-                </p>
-                <p>
-                    Our calculator allows you to model both scenarios: an initial lump sum combined with regular monthly contributions. This reflects how most people actually invest — with an initial amount plus ongoing additions from their income. Use the "Compare Scenarios" feature to see how different contribution levels affect your outcome.
-                </p>
-
+                <p>While lump sum investments have the advantage of maximizing time in the market, regular monthly contributions (also known as dollar-cost averaging) offer their own benefits. By investing a fixed amount regularly, you buy more shares when prices are low and fewer when they're high, potentially reducing the impact of market volatility on your portfolio.</p>
                 <h2>Understanding Investment Returns</h2>
-                <p>
-                    The annual interest rate you enter into the calculator represents your expected average annual return. Historical returns vary by asset class: the S&P 500 has averaged approximately 10% per year (about 7% after inflation) over the long term, while bonds typically return 3-5%, and savings accounts currently offer 4-5%. Your actual rate should reflect your investment strategy and risk tolerance.
-                </p>
-                <p>
-                    Keep in mind that real-world returns fluctuate significantly from year to year. The stock market might return 25% one year and lose 15% the next. Our calculator uses a constant rate for simplicity, but your actual results will vary. For long-term planning, using a conservative estimate (such as 6-7% for a diversified stock portfolio) is prudent.
-                </p>
-
+                <p>The annual interest rate you enter into the calculator represents your expected average annual return. Historical returns vary by asset class: the S&P 500 has averaged approximately 10% per year (about 7% after inflation) over the long term, while bonds typically return 3-5%, and savings accounts currently offer 4-5%.</p>
                 <h2>Tax Considerations</h2>
-                <p>
-                    The type of account you invest in significantly impacts your actual returns. Tax-advantaged accounts like 401(k)s and Roth IRAs allow your investments to grow tax-free or tax-deferred, maximizing the compound interest effect. In a taxable brokerage account, you'll owe taxes on dividends and capital gains, which reduces the effective compound rate.
-                </p>
+                <p>The type of account you invest in significantly impacts your actual returns. Tax-advantaged accounts like 401(k)s and Roth IRAs allow your investments to grow tax-free or tax-deferred, maximizing the compound interest effect.</p>
                 <ul>
                     <li><strong>Traditional 401(k)/IRA:</strong> Contributions are tax-deductible, but withdrawals are taxed as ordinary income in retirement.</li>
                     <li><strong>Roth 401(k)/IRA:</strong> Contributions are made with after-tax dollars, but all growth and withdrawals are completely tax-free.</li>
                     <li><strong>Taxable accounts:</strong> No contribution limits or withdrawal restrictions, but gains are taxed annually.</li>
                 </ul>
-                <p>
-                    For the most accurate picture of your future wealth, consider which account type you'll be using and adjust the interest rate accordingly. Our calculator shows pre-tax growth, so your actual take-home amount may differ.
-                </p>
             </section>
 
             <FAQSection faqs={faqs} />
-
             <AdSlot type="multiplex" />
-
             <TryNextCalculator currentPath="/compound-interest-calculator" />
         </div>
     );

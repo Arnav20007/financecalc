@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="rg2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="rs"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.25"/></filter>
+  </defs>
+  <!-- Sun / beach -->
+  <circle cx="150" cy="50" r="28" fill="url(#rg1)" opacity="0.15"/>
+  <circle cx="150" cy="50" r="18" fill="url(#rg1)" opacity="0.3"/>
+  <circle cx="150" cy="50" r="10" fill="url(#rg1)" filter="url(#rs)">
+    <animate attributeName="r" values="10;12;10" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <!-- Piggy bank body -->
+  <g transform="translate(85,110)" filter="url(#rs)">
+    <ellipse cx="0" cy="0" rx="45" ry="35" fill="url(#rg2)"/>
+    <ellipse cx="-30" cy="-20" rx="12" ry="10" fill="url(#rg2)"/>
+    <circle cx="-25" cy="-22" r="3" fill="white" opacity="0.8"/>
+    <circle cx="-25" cy="-22" r="1.5" fill="#0f172a"/>
+    <!-- Slot -->
+    <rect x="-10" y="-37" width="20" height="4" rx="2" fill="#1e293b"/>
+    <!-- Legs -->
+    <rect x="-32" y="28" width="10" height="14" rx="4" fill="url(#rg2)" opacity="0.8"/>
+    <rect x="22" y="28" width="10" height="14" rx="4" fill="url(#rg2)" opacity="0.8"/>
+    <!-- Tail -->
+    <path d="M42,0 Q55,-8 48,-18" stroke="url(#rg2)" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- Coin going in -->
+  <g transform="translate(85,55)">
+    <animateTransform attributeName="transform" type="translate" values="85,55;85,68;85,55" dur="2s" repeatCount="indefinite"/>
+    <circle cx="0" cy="0" r="10" fill="url(#rg1)" filter="url(#rs)"/>
+    <text x="0" y="4" text-anchor="middle" fill="white" font-size="9" font-weight="bold" font-family="sans-serif">$</text>
+  </g>
+  <!-- Goal -->
+  <g transform="translate(160,140)">
+    <rect x="-22" y="-10" width="44" height="20" rx="10" fill="url(#rg1)"/>
+    <text x="0" y="4" text-anchor="middle" fill="white" font-size="7" font-weight="700" font-family="sans-serif">GOAL</text>
+  </g>
+</svg>

@@ -14,6 +14,7 @@ import ShareButton from '../components/common/ShareButton';
 import { calculateDebtSnowball } from '../utils/calculations';
 import { formatCurrency, formatMonthsToYears } from '../utils/formatters';
 import { generatePDF } from '../utils/pdfGenerator';
+import PrivacyBadge from '../components/common/PrivacyBadge';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -49,7 +50,15 @@ export default function DebtSnowballCalculator() {
 
     const updateDebt = (index, field, value) => {
         const updated = [...debts];
-        updated[index] = { ...updated[index], [field]: field === 'name' ? value : parseFloat(value) || 0 };
+        if (field === 'name') {
+            updated[index] = { ...updated[index], name: value };
+        } else {
+            // Sanitize: only allow digits and dots
+            const sanitized = String(value).replace(/[^0-9.]/g, '');
+            const parts = sanitized.split('.');
+            const clean = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+            updated[index] = { ...updated[index], [field]: parseFloat(clean) || 0 };
+        }
         setDebts(updated);
     };
 
@@ -132,10 +141,10 @@ export default function DebtSnowballCalculator() {
                 <div className="debt-inputs">
                     {/* Column headers */}
                     <div className="debt-row" style={{ marginBottom: '0.25rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</label>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</label>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rate (%)</label>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Min. Payment</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rate (%)</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Min. Payment</label>
                         <div></div>
                     </div>
                     {debts.map((debt, idx) => (
@@ -150,20 +159,21 @@ export default function DebtSnowballCalculator() {
                 </div>
                 <button type="button" className="btn-add-debt" onClick={addDebt}>+ Add Another Debt</button>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem', padding: '1rem', background: 'var(--color-gray-50)', borderRadius: 'var(--border-radius)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-glass)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
                     <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>Total Debt</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(totalDebt)}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Debt</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(totalDebt)}</div>
                     </div>
                     <div className="form-group">
-                        <label htmlFor="extraPayment" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--color-gray-500)' }}>Extra Monthly Payment</label>
-                        <input id="extraPayment" type="number" className="form-input" value={extraPayment} onChange={e => setExtraPayment(e.target.value)} min="0" step="50" />
+                        <label htmlFor="extraPayment" style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Extra Monthly Payment</label>
+                        <input id="extraPayment" type="text" inputMode="decimal" className="form-input" value={extraPayment} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); setExtraPayment(v); }} min="0" step="50" />
                     </div>
                 </div>
 
                 <button type="submit" className="btn-calculate" id="calculate-debt-snowball" style={{ marginTop: '1.25rem' }}>
                     Calculate Debt Payoff Strategy
                 </button>
+                <PrivacyBadge />
             </form>
 
             {results && (
@@ -173,20 +183,20 @@ export default function DebtSnowballCalculator() {
                         <div className="result-card" style={{ borderTop: '3px solid #2563eb' }}>
                             <div className="result-label">❄️ Snowball</div>
                             <div className="result-value small">{formatMonthsToYears(results.snowball.totalMonths)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: 'var(--color-gray-500)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.snowball.totalInterest)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: '#059669', fontWeight: 600 }}>Saves {formatCurrency(results.interestSavedSnowball)}</div>
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.snowball.totalInterest)}</div>
+                            <div style={{ fontSize: '0.8125rem', color: '#10b981', fontWeight: 600 }}>Saves {formatCurrency(results.interestSavedSnowball)}</div>
                         </div>
-                        <div className="result-card" style={{ borderTop: '3px solid #059669' }}>
+                        <div className="result-card" style={{ borderTop: '3px solid #10b981' }}>
                             <div className="result-label">🏔️ Avalanche</div>
                             <div className="result-value small">{formatMonthsToYears(results.avalanche.totalMonths)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: 'var(--color-gray-500)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.avalanche.totalInterest)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: '#059669', fontWeight: 600 }}>Saves {formatCurrency(results.interestSavedAvalanche)}</div>
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.avalanche.totalInterest)}</div>
+                            <div style={{ fontSize: '0.8125rem', color: '#10b981', fontWeight: 600 }}>Saves {formatCurrency(results.interestSavedAvalanche)}</div>
                         </div>
-                        <div className="result-card" style={{ borderTop: '3px solid #dc2626', background: '#fef2f2' }}>
+                        <div className="result-card" style={{ borderTop: '3px solid #ef4444', background: 'rgba(239,68,68,0.06)' }}>
                             <div className="result-label">⚠️ Minimum Only</div>
                             <div className="result-value small">{formatMonthsToYears(results.minimumOnly.totalMonths)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: 'var(--color-gray-500)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.minimumOnly.totalInterest)}</div>
-                            <div style={{ fontSize: '0.8125rem', color: '#dc2626', fontWeight: 600 }}>Baseline</div>
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Interest: {formatCurrency(results.minimumOnly.totalInterest)}</div>
+                            <div style={{ fontSize: '0.8125rem', color: '#ef4444', fontWeight: 600 }}>Baseline</div>
                         </div>
                     </div>
 
@@ -195,8 +205,8 @@ export default function DebtSnowballCalculator() {
                         <div className="chart-container">
                             <Line data={chartData} options={{
                                 responsive: true, maintainAspectRatio: false,
-                                plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}` } } },
-                                scales: { y: { ticks: { callback: v => formatCurrency(v) }, grid: { color: 'rgba(0,0,0,0.04)' } }, x: { grid: { display: false } } },
+                                plugins: { legend: { position: 'top', labels: { color: '#94a3b8', padding: 16, usePointStyle: true } }, tooltip: { backgroundColor: 'rgba(15,22,41,0.95)', titleColor: '#f1f5f9', bodyColor: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8, callbacks: { label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}` } } },
+                                scales: { y: { ticks: { callback: v => formatCurrency(v), color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'transparent' } }, x: { grid: { display: false }, ticks: { color: '#64748b' }, border: { color: 'transparent' } } },
                             }} />
                         </div>
                     </div>
@@ -207,17 +217,17 @@ export default function DebtSnowballCalculator() {
                     <div className="data-table-wrapper">
                         <div className="data-table-header"><h3>Recommended Payoff Order</h3></div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
-                            <div style={{ padding: '1rem 1.5rem', borderRight: '1px solid var(--color-gray-200)' }}>
-                                <h4 style={{ fontSize: '0.875rem', color: '#2563eb', marginBottom: '0.75rem' }}>❄️ Snowball Order (Smallest Balance First)</h4>
-                                <ol style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--color-gray-700)' }}>
+                            <div style={{ padding: '1rem 1.5rem', borderRight: '1px solid var(--border-primary)' }}>
+                                <h4 style={{ fontSize: '0.875rem', color: '#3b82f6', marginBottom: '0.75rem' }}>❄️ Snowball Order (Smallest Balance First)</h4>
+                                <ol style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                     {results.snowball.payoffOrder.map((name, i) => (
                                         <li key={i} style={{ marginBottom: '0.375rem' }}>{name}</li>
                                     ))}
                                 </ol>
                             </div>
                             <div style={{ padding: '1rem 1.5rem' }}>
-                                <h4 style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.75rem' }}>🏔️ Avalanche Order (Highest Rate First)</h4>
-                                <ol style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--color-gray-700)' }}>
+                                <h4 style={{ fontSize: '0.875rem', color: '#10b981', marginBottom: '0.75rem' }}>🏔️ Avalanche Order (Highest Rate First)</h4>
+                                <ol style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                     {results.avalanche.payoffOrder.map((name, i) => (
                                         <li key={i} style={{ marginBottom: '0.375rem' }}>{name}</li>
                                     ))}

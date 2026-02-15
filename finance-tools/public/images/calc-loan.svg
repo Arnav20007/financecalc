@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="lg2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="ls"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#10b981" flood-opacity="0.25"/></filter>
+  </defs>
+  <!-- House -->
+  <g filter="url(#ls)">
+    <polygon points="100,25 40,70 160,70" fill="url(#lg1)"/>
+    <rect x="55" y="70" width="90" height="70" rx="4" fill="url(#lg1)" opacity="0.8"/>
+    <rect x="82" y="95" width="36" height="45" rx="3" fill="#0a0e1a" opacity="0.4"/>
+    <circle cx="112" cy="118" r="2.5" fill="#fbbf24"/>
+  </g>
+  <!-- Downward chart line -->
+  <path d="M30 110 Q60 115, 85 125 Q110 138, 135 148 Q155 155, 175 158" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 3" fill="none" opacity="0.4"/>
+  <path d="M30 130 Q60 132, 85 138 Q110 145, 135 155 Q155 162, 175 168" stroke="url(#lg1)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Checkmark shield -->
+  <g transform="translate(155,42)">
+    <animateTransform attributeName="transform" type="translate" values="155,42;155,36;155,42" dur="3s" repeatCount="indefinite"/>
+    <path d="M0,-18 L14,-8 L14,8 Q14,18 0,22 Q-14,18 -14,8 L-14,-8 Z" fill="url(#lg1)" filter="url(#ls)"/>
+    <polyline points="-6,2 -1,7 7,-3" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <!-- Monthly label -->
+  <g transform="translate(40,165)">
+    <rect x="-10" y="-8" width="55" height="16" rx="8" fill="url(#lg2)" opacity="0.9"/>
+    <text x="17" y="4" text-anchor="middle" fill="white" font-size="7" font-weight="700" font-family="sans-serif">EMI ↓</text>
+  </g>
+</svg>
