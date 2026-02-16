@@ -15,13 +15,11 @@ export default function Layout() {
     return (
         <div className="page-wrapper">
             <Header />
-            <AdSlot type="header" />
             <main className="main-content">
                 <div className="container">
                     <Outlet />
                 </div>
             </main>
-            <AdSlot type="bottom" />
             <Footer />
         </div>
     );

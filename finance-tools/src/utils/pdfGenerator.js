@@ -6,7 +6,7 @@
 export async function generatePDF(title, summary, tableData, tableColumns) {
     // Dynamic import to keep the initial bundle small
     const { default: jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -54,7 +54,7 @@ export async function generatePDF(title, summary, tableData, tableColumns) {
         doc.setFont('helvetica', 'bold');
         doc.text('Detailed Breakdown', 14, yPos + 10);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: yPos + 18,
             head: [tableColumns.map(c => c.header)],
             body: tableData.map(row => tableColumns.map(c => c.accessor(row))),
@@ -87,3 +87,4 @@ export async function generatePDF(title, summary, tableData, tableColumns) {
 
     doc.save(`${title.replace(/\s+/g, '_').toLowerCase()}_results.pdf`);
 }
+

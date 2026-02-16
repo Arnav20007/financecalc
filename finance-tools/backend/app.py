@@ -3,7 +3,7 @@ FinanceCalc — Flask Backend API
 Production-ready REST API structure for financial calculations
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import os
 
@@ -14,6 +14,9 @@ CORS(app)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://localhost:5432/financecalc')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 📁 Frontend build folder
+FRONTEND_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'dist')
 
 
 # ─── Health Check ───────────────────────────────────────────────────────
@@ -214,6 +217,16 @@ def inflation():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+
+# ─── Serve React Frontend ─────────────────────────────────────────────
+@app.route("/")
+def serve_frontend():
+    return send_from_directory(FRONTEND_FOLDER, "index.html")
+
+@app.route("/<path:path>")
+def serve_static(path):
+    return send_from_directory(FRONTEND_FOLDER, path)
 
 
 if __name__ == '__main__':

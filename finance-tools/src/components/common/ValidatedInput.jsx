@@ -19,7 +19,7 @@ export default function ValidatedInput({
     // Prevent non-numeric keyboard input for number fields
     const handleKeyDown = (e) => {
         if (type !== 'number') return;
-        const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', '.', '-'];
+        const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', '.'];
         if (allowed.includes(e.key)) return;
         if (e.ctrlKey || e.metaKey) return;
         if (!/[0-9]/.test(e.key)) {

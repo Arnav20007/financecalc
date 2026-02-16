@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import CurrencySelector from '../common/CurrencySelector';
 
 const navLinks = [
     { path: '/', label: 'Home' },
@@ -34,6 +35,7 @@ export default function Header() {
                     </nav>
 
                     <div className="header-actions">
+                        <CurrencySelector />
                         <button
                             className="theme-toggle"
                             onClick={toggleTheme}

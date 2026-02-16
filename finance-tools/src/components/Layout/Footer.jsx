@@ -10,26 +10,27 @@ export default function Footer() {
                         <div className="footer-logo">FinanceCalc</div>
                         <p>Free professional-grade financial calculators for compound interest, loan payoff, retirement planning, inflation analysis, and debt repayment.</p>
                     </div>
-                    <div className="footer-col">
-                        <h4>Calculators</h4>
+                    <div className="footer-col" id="footer-calculators">
+                        <h4>Interactive Tools</h4>
                         <Link to="/compound-interest-calculator">Compound Interest</Link>
                         <Link to="/loan-payoff-calculator">Loan Payoff</Link>
-                        <Link to="/retirement-calculator">Retirement</Link>
-                        <Link to="/inflation-calculator">Inflation</Link>
+                        <Link to="/retirement-calculator">Retirement Plan</Link>
+                        <Link to="/inflation-calculator">Inflation Impact</Link>
                         <Link to="/debt-snowball-calculator">Debt Snowball</Link>
                     </div>
-                    <div className="footer-col">
-                        <h4>Learn</h4>
-                        <Link to="/compound-interest-calculator">Investing Basics</Link>
-                        <Link to="/debt-snowball-calculator">Debt Payoff Strategies</Link>
-                        <Link to="/retirement-calculator">Retirement Planning</Link>
-                        <Link to="/inflation-calculator">Understanding Inflation</Link>
+                    <div className="footer-col" id="footer-resources">
+                        <h4>Learning Center</h4>
+                        <Link to="/compound-interest-calculator#seo">Wealth Building 101</Link>
+                        <Link to="/loan-payoff-calculator#seo">Debt Mastery Guide</Link>
+                        <Link to="/retirement-calculator#seo">Retirement Strategy</Link>
+                        <Link to="/inflation-calculator#seo">Economics of Inflation</Link>
+                        <Link to="/debt-snowball-calculator#seo">Payoff Methodologies</Link>
                     </div>
-                    <div className="footer-col">
-                        <h4>Legal</h4>
+                    <div className="footer-col" id="footer-legal">
+                        <h4>Legal & Trust</h4>
                         <Link to="/privacy-policy">Privacy Policy</Link>
                         <Link to="/terms-and-conditions">Terms of Service</Link>
-                        <Link to="/disclaimer">Disclaimer</Link>
+                        <Link to="/disclaimer">Earnings Disclaimer</Link>
                     </div>
                 </div>
                 <div className="footer-disclaimer">

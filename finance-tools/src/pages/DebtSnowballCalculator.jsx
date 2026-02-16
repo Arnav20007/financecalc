@@ -11,8 +11,9 @@ import TryNextCalculator from '../components/common/TryNextCalculator';
 import InternalLinks from '../components/common/InternalLinks';
 import AdSlot from '../components/common/AdSlot';
 import ShareButton from '../components/common/ShareButton';
+import { useCurrency } from '../context/CurrencyContext';
 import { calculateDebtSnowball } from '../utils/calculations';
-import { formatCurrency, formatMonthsToYears } from '../utils/formatters';
+import { formatMonthsToYears } from '../utils/formatters';
 import { generatePDF } from '../utils/pdfGenerator';
 import PrivacyBadge from '../components/common/PrivacyBadge';
 
@@ -24,6 +25,11 @@ const faqs = [
     { question: 'Which is better — snowball or avalanche?', answer: 'Mathematically, the avalanche method always saves more in interest. However, behavioral research shows that the psychological boost from paying off small debts quickly (snowball) helps many people stay committed to their payoff plan. The best method is the one you\'ll stick with. Our calculator shows both so you can compare.' },
     { question: 'How much extra should I put toward debt?', answer: 'Any extra amount helps, but a common guideline is to use the 50/30/20 budget rule: 50% for needs, 30% for wants, and 20% for savings and debt repayment. If you\'re aggressively paying off debt, you might temporarily shift to 50/20/30 (allocating more to debt). Even an extra $100/month can save thousands in interest.' },
     { question: 'Should I pay off debt or invest?', answer: 'Generally, if your debt interest rate is higher than your expected investment return, prioritize debt payoff. For example, paying off a 20% credit card is equivalent to earning a guaranteed 20% return. However, always contribute enough to get any employer 401(k) match first (it\'s free money). For low-interest debt (under 5%), investing may be more beneficial long-term.' },
+    { question: 'Should I have an emergency fund before starting?', answer: 'Yes. Most financial experts recommend saving a "starter" emergency fund of $1,000 to $2,000 before aggressively paying off debt. This ensures that a car repair or medical bill doesn’t force you back into high-interest credit card debt while you are in the middle of your payoff plan.' },
+    { question: 'Does debt consolidation help?', answer: 'Debt consolidation — taking out one large loan to pay off multiple smaller ones — can help if the new loan has a significantly lower interest rate and if you stop using the credit cards you just paid off. Without a change in spending habits, consolidation often leads to even more debt.' },
+    { question: 'What is "0% APR Balance Transfer"?', answer: 'This is a credit card offer that allows you to move your debt to a new card with 0% interest for a set period (usually 12-21 months). This is a powerful tool to pause interest and pay down principal, but be aware of "transfer fees" (usually 3-5%) and ensure you pay it off before the promotion ends.' },
+    { question: 'How do extra payments impact the timeline?', answer: 'Because credit card interest is calculated daily or monthly based on your balance, paying even a small extra amount early in the month reduces the principal that interest is calculated on. This "compound interest in reverse" can shave years off your timeline.' },
+    { question: 'What happens to my credit score as I pay off debt?', answer: 'As your "credit utilization ratio" (the amount of credit you are using vs. your total limit) decreases, your credit score typically increases. A utilization below 30% is considered good, and below 10% is excellent.' },
     { question: 'Does closing credit cards after paying them off help?', answer: 'Generally, no. Closing credit cards can hurt your credit score by reducing your total available credit (increasing your credit utilization ratio) and shortening your average account age. It\'s usually better to keep the cards open and use them occasionally for small purchases that you pay off immediately.' },
 ];
 
@@ -34,10 +40,30 @@ const defaultDebts = [
 ];
 
 export default function DebtSnowballCalculator() {
+    const { formatCurrency } = useCurrency();
     const [debts, setDebts] = useState(defaultDebts);
     const [extraPayment, setExtraPayment] = useState(200);
     const [results, setResults] = useState(null);
+    const [showMinPayments, setShowMinPayments] = useState(true);
+    const [copied, setCopied] = useState(false);
     const resultsRef = useRef(null);
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const loadExample = () => {
+        setDebts([
+            { name: 'Credit Card', balance: 8500, rate: 24.99, minPayment: 200 },
+            { name: 'Personal Loan', balance: 12000, rate: 11.5, minPayment: 300 },
+            { name: 'Car Loan', balance: 18000, rate: 5.9, minPayment: 400 },
+            { name: 'Student Loan', balance: 35000, rate: 4.5, minPayment: 350 },
+        ]);
+        setExtraPayment(500);
+        setResults(null);
+    };
 
     const handleCalculate = (e) => {
         e.preventDefault();
@@ -105,13 +131,13 @@ export default function DebtSnowballCalculator() {
                 backgroundColor: 'rgba(5, 150, 105, 0.05)',
                 fill: false, tension: 0.3, pointRadius: 4,
             },
-            {
+            ...(showMinPayments ? [{
                 label: 'Minimum Payments Only',
                 data: results.minimumOnly.timeline.map(t => t.totalBalance),
                 borderColor: '#dc2626',
                 backgroundColor: 'rgba(220, 38, 38, 0.05)',
                 fill: false, tension: 0.3, pointRadius: 4, borderDash: [5, 5],
-            },
+            }] : []),
         ],
     } : null;
 
@@ -136,6 +162,12 @@ export default function DebtSnowballCalculator() {
             </section>
 
             <form className="calculator-form" onSubmit={handleCalculate} id="debt-snowball-form">
+                <div className="form-top-actions">
+                    <button type="button" className="btn-load-example" onClick={loadExample}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        Load Example
+                    </button>
+                </div>
                 <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Enter Your Debts</h3>
 
                 <div className="debt-inputs">
@@ -201,7 +233,16 @@ export default function DebtSnowballCalculator() {
                     </div>
 
                     <div className="chart-section">
-                        <h3>Debt Payoff Timeline Comparison</h3>
+                        <div className="chart-header">
+                            <h3>Debt Payoff Timeline Comparison</h3>
+                            <button
+                                className={`chart-toggle ${showMinPayments ? 'active' : ''}`}
+                                onClick={() => setShowMinPayments(!showMinPayments)}
+                                type="button"
+                            >
+                                {showMinPayments ? 'Hide Min Payments' : 'Show Min Payments'}
+                            </button>
+                        </div>
                         <div className="chart-container">
                             <Line data={chartData} options={{
                                 responsive: true, maintainAspectRatio: false,
@@ -211,7 +252,7 @@ export default function DebtSnowballCalculator() {
                         </div>
                     </div>
 
-                    <AdSlot type="mid-content" />
+
 
                     {/* Payoff Order */}
                     <div className="data-table-wrapper">
@@ -242,64 +283,57 @@ export default function DebtSnowballCalculator() {
                             Download PDF
                         </button>
                         <ShareButton title="Debt Payoff Plan" text={`I can be debt-free in ${formatMonthsToYears(results.snowball.totalMonths)} and save ${formatCurrency(results.interestSavedSnowball)} in interest!`} />
+                        <button className="btn-action" onClick={handleCopyLink} type="button">
+                            {copied ? (
+                                <><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg> Copied!</>
+                            ) : (
+                                <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg> Copy Link</>
+                            )}
+                        </button>
                     </div>
                 </div>
             )}
 
             <InternalLinks currentPath="/debt-snowball-calculator" />
 
-            <section className="seo-content">
-                <h2>Understanding Debt Payoff Strategies</h2>
-                <p>
-                    When you have multiple debts, choosing the right payoff strategy can save you thousands of dollars in interest and get you to financial freedom years sooner. The two most popular approaches are the debt snowball and debt avalanche methods. Both are effective, but they optimize for different things — motivation vs. mathematics.
-                </p>
-                <p>
-                    Our calculator compares both methods side by side, showing you exactly how much time and money each approach saves compared to making only minimum payments. This transparency empowers you to choose the strategy that best fits your financial personality and goals.
-                </p>
+            <section className="seo-content" id="seo">
+                <h2>The Comprehensive Guide to Becoming Debt-Free</h2>
+                <p>Living with debt can feel like swimming against a powerful current. No matter how hard you work, it seems like you're barely making progress. However, with a clear strategy and a visual roadmap, you can regain control of your financial future. Our Debt Snowball Calculator is designed to compare the world's most effective debt-payoff strategies, showing you exactly when you'll cross the finish line.</p>
 
-                <h2>The Debt Snowball Method Explained</h2>
-                <p>
-                    Popularized by Dave Ramsey, the debt snowball method focuses on behavioral psychology rather than pure mathematics. Here's how it works: list all your debts from smallest balance to largest. Make minimum payments on everything, then throw every extra dollar at the smallest debt. When that's paid off, take its full payment amount and add it to the next smallest debt's minimum payment.
-                </p>
-                <p>
-                    The power of the snowball method lies in the quick wins it provides. Paying off a small debt completely — even a $500 credit card — creates a psychological boost that motivates you to keep going. Research by Harvard Business Review found that people who focus on small wins are more likely to stick with their debt repayment plans.
-                </p>
+                <h3>Understanding the "Minimum Payment Trap"</h3>
+                <p>Banks and credit card companies design minimum payments to keep you in debt for as long as possible. Typically, a minimum payment is calculated as only 1% to 2% of your total balance plus any interest accrued that month. This means that if you only pay the minimum, you are barely touching the principal balance. On a $10,000 credit card with a 20% interest rate, making only minimum payments could take over 20 years to pay off and cost you more in interest than the original $10,000 you spent. Our calculator highlights the "Minimum Only" baseline to show you just how much time and money you save by adding even a small amount extra each month.</p>
 
-                <h2>The Debt Avalanche Method Explained</h2>
-                <p>
-                    The debt avalanche method is the mathematically optimal approach. Instead of focusing on balance size, you order your debts by interest rate, from highest to lowest. You make minimum payments on all debts and put extra money toward the highest-rate debt first.
-                </p>
-                <p>
-                    This method minimizes the total interest you pay over the life of your debt repayment. For people with high-interest credit card debt alongside lower-rate student loans or car payments, the avalanche method can save significant money. However, if your highest-rate debt also has the largest balance, it may take months before you get the satisfaction of paying anything off completely.
-                </p>
-
-                <h2>How Extra Payments Accelerate Payoff</h2>
-                <p>
-                    The impact of extra payments on debt elimination is dramatic. Consider someone with $45,000 in total debt across multiple accounts. Making only minimum payments might take 15+ years and cost $30,000+ in interest. Adding just $200/month in extra payments can cut the timeline to 4-5 years and save $20,000+ in interest.
-                </p>
-                <p>
-                    Finding extra money for debt payoff doesn't always require a higher income. Common strategies include: reducing discretionary spending, selling unused items, picking up a side gig, redirecting savings from paid-off debts (the snowball effect), and using windfalls like tax refunds strategically.
-                </p>
-
-                <h2>When to Consider Debt Consolidation</h2>
-                <p>
-                    If you're juggling multiple high-interest debts, consolidation might simplify your payments and potentially lower your overall interest rate. Balance transfer credit cards (often with 0% introductory APR), personal loans, and home equity loans are common consolidation tools.
-                </p>
-                <p>
-                    However, consolidation only makes sense if the new interest rate is meaningfully lower than your current average rate and if you're committed to not accumulating new debt. Many people consolidate only to run up their credit cards again, ending up in a worse position than before. Use our calculator to compare consolidation scenarios against your current payoff plan.
-                </p>
-
-                <h2>Building Financial Habits After Debt</h2>
+                <h3>Motivation vs. Mathematics: Snowball vs. Avalanche</h3>
+                <p>The two most popular payoff methods optimize for different things:</p>
                 <ul>
-                    <li><strong>Emergency fund first:</strong> Build 3-6 months of expenses in savings to avoid future debt from unexpected costs.</li>
-                    <li><strong>Redirect payments to savings:</strong> Once debt-free, invest the same amount you were paying toward debt into retirement savings or investments.</li>
-                    <li><strong>Use credit wisely:</strong> Keep credit cards for convenience and rewards, but pay the full balance monthly. Never carry a balance if you can help it.</li>
-                    <li><strong>Budget consistently:</strong> The habits that helped you pay off debt — budgeting, tracking expenses, being intentional — will serve you well in building wealth.</li>
+                    <li><strong>The Debt Snowball (Psychological Optimization):</strong> Popularized by Dave Ramsey, this method focuses on behavioral psychology. You list your debts from smallest balance to largest. By knocking out the small ones first, you get a hit of dopamine and a "quick win" that keeps you motivated to tackle the bigger monsters. Research from Harvard Business Review suggests that "small wins" are the most significant predictor of successfully completing a debt-free journey.</li>
+                    <li><strong>The Debt Avalanche (Mathematical Optimization):</strong> This method orders debts by interest rate (highest to lowest). By attacking the most expensive debt first, you minimize the total interest paid and technically become debt-free faster. If you are highly disciplined and unemotional about math, the Avalanche is your best friend.</li>
                 </ul>
+
+                <h3>How Extra Payments Create a Compounding "Snowball"</h3>
+                <p>The magic of these methods isn't just the order — it's the <strong>rollover effect</strong>. When Debt #1 is paid off, its monthly payment doesn't go back into your pocket; it gets "rolled over" and added to the payment for Debt #2. As you pay off more debts, your monthly "power payment" grows larger and larger, exactly like a snowball rolling down a hill. By the time you reach your final, largest debt (like a student loan or a mortgage), you might be throwing thousands of dollars a month at it, crushing it in record time.</p>
+
+                <h3>The Impact of Debt on Your Credit Score</h3>
+                <p>Your "Debt-to-Income" (DTI) ratio and "Credit Utilization" are the two biggest factors in your credit score. As you use our calculator to pay down balances, you'll likely see your credit score increase. Carrying high credit card balances (over 30% utilization) signals to lenders that you may be overextended. Paying these down not only saves you interest but also unlocks lower interest rates for future needs like home buying or business loans.</p>
+
+                <h3>When to Consider Debt Consolidation or Settlement</h3>
+                <p>If your total debt (excluding mortgage) exceeds 50% of your annual income, or if you are struggling to make even minimum payments, you might need to look beyond the snowball method:</p>
+                <ul>
+                    <li><strong>Debt Consolidation:</strong> Taking out a single personal loan at a lower interest rate to pay off all your high-interest cards. This simplifies your life but only works if you stop using the credit cards.</li>
+                    <li><strong>Balance Transfer Cards:</strong> Many cards offer 0% APR for 12-21 months. This can be a powerful tool to pause interest while you aggressively pay down principal using the Avalanche method.</li>
+                    <li><strong>Debt Settlement/Bankruptcy:</strong> These are "last resort" options that provide relief but severely damage your credit for years. Consult with a non-profit credit counseling agency before taking these steps.</li>
+                </ul>
+
+                <h3>Life After Debt: Building a Legacy</h3>
+                <ol>
+                    <li><strong>Build a "Starter" Emergency Fund:</strong> Before starting your snowball, save $1,000 to $2,000. This ensures that a flat tire or a broken appliance doesn't force you back into debt.</li>
+                    <li><strong>The Full Emergency Fund:</strong> Once the debt is gone, redirect that massive "power payment" into a high-yield savings account until you have 3-6 months of expenses.</li>
+                    <li><strong>Wealth Building:</strong> The habits you built while paying off debt — discipline, tracking, and intentionality — are the exact same habits needed to become a millionaire. Once you are debt-free, you are finally working for yourself, not for the bank.</li>
+                </ol>
             </section>
 
             <FAQSection faqs={faqs} />
-            <AdSlot type="multiplex" />
+
             <TryNextCalculator currentPath="/debt-snowball-calculator" />
         </div>
     );

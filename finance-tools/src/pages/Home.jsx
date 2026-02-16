@@ -81,8 +81,6 @@ export default function Home() {
                 </div>
             </section>
 
-            <AdSlot type="header" />
-
             <section className="calculators-section">
                 <div className="section-header">
                     <h2>Powerful Financial Calculators</h2>
@@ -111,8 +109,6 @@ export default function Home() {
                     ))}
                 </div>
             </section>
-
-            <AdSlot type="mid-content" />
 
             <section className="features-section">
                 <div className="section-header">
@@ -158,7 +154,6 @@ export default function Home() {
                 <p>Every calculator shows its work with detailed breakdowns, year-by-year tables, and interactive charts. Download your results as a PDF to share with your spouse, financial advisor, or keep for your records.</p>
             </section>
 
-            <AdSlot type="multiplex" />
         </div>
     );
 }

@@ -13,8 +13,8 @@ import AdSlot from '../components/common/AdSlot';
 import ShareButton from '../components/common/ShareButton';
 import ValidatedInput from '../components/common/ValidatedInput';
 import PrivacyBadge from '../components/common/PrivacyBadge';
+import { useCurrency } from '../context/CurrencyContext';
 import { calculateCompoundInterest } from '../utils/calculations';
-import { formatCurrency } from '../utils/formatters';
 import { generatePDF } from '../utils/pdfGenerator';
 import { useValidatedInputs } from '../utils/useValidatedInput';
 
@@ -26,6 +26,10 @@ const faqs = [
     { question: 'What is the difference between simple and compound interest?', answer: 'Simple interest is calculated only on the original principal amount. Compound interest is calculated on the principal plus any previously earned interest. Over long periods, compound interest results in significantly higher returns. For example, $10,000 at 7% simple interest earns $700/year forever, but with compound interest, the earnings grow every year.' },
     { question: 'How do monthly contributions affect compound interest?', answer: 'Regular monthly contributions dramatically accelerate wealth building. Each contribution starts earning compound interest immediately, and the combined effect of consistent investing plus compounding creates a powerful wealth-building engine. Even small monthly amounts can grow to significant sums over decades.' },
     { question: 'What is the Rule of 72?', answer: 'The Rule of 72 is a quick way to estimate how long it takes for an investment to double. Simply divide 72 by the annual interest rate. For example, at 8% annual return, your money doubles in approximately 72/8 = 9 years. This is an approximation that works best for rates between 6% and 10%.' },
+    { question: 'Does inflation affect compound interest earnings?', answer: 'Yes, while your money grows numerically, inflation reduces the "purchasing power" of those future dollars. To account for this, many financial planners suggest using a "real rate of return" (your expected interest rate minus inflation) to see what your future wealth will actually buy in today’s terms.' },
+    { question: 'Are investment returns always constant as shown in charts?', answer: 'No. The stock market and other investments fluctuate. While our calculator shows a smooth growth curve based on a fixed rate, real-world returns go up and down. Compounding works best when you remain invested through these market cycles over the long term.' },
+    { question: 'How do taxes impact my compounded growth?', answer: 'Taxes can significantly "leak" your compounded growth if not managed well. Investing in tax-advantaged accounts like Roth IRAs or 401(k)s allows your money to compound without being taxed annually, which can lead to a 20-30% larger final balance compared to a taxable account.' },
+    { question: 'Can I over-contribute to my investments?', answer: 'Mathematically, more is almost always better for compounding. However, ensure you have an emergency fund first and that you are not exceeding legal contribution limits for specific accounts like IRAs or 401(k)s, as this can lead to tax penalties.' },
     { question: 'Are the results of this calculator guaranteed?', answer: 'No. This calculator provides estimates based on a constant rate of return. Real-world investment returns vary from year to year and are not guaranteed. The results are for educational and planning purposes only. Consult a qualified financial advisor for personalized investment advice.' },
 ];
 
@@ -37,7 +41,8 @@ const validationRules = {
 };
 
 export default function CompoundInterestCalculator() {
-    const { values: inputs, errors, touched, handleChange, handleBlur, validateAll, getNumericValue } = useValidatedInputs(
+    const { formatCurrency, symbol } = useCurrency();
+    const { values: inputs, errors, touched, handleChange, handleBlur, validateAll, getNumericValue, setValues } = useValidatedInputs(
         { principal: '10000', monthly: '500', rate: '7', years: '20' },
         validationRules
     );
@@ -45,7 +50,20 @@ export default function CompoundInterestCalculator() {
     const [compareMode, setCompareMode] = useState(false);
     const [compareInputs, setCompareInputs] = useState({ principal: '10000', monthly: '500', rate: '10', years: '20' });
     const [compareResults, setCompareResults] = useState(null);
+    const [copied, setCopied] = useState(false);
+    const [showInterest, setShowInterest] = useState(true);
     const resultsRef = useRef(null);
+
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const loadExample = () => {
+        setValues({ principal: '25000', monthly: '750', rate: '8', years: '30' });
+        setResults(null);
+    };
 
     const handleCalculate = (e) => {
         e.preventDefault();
@@ -106,7 +124,15 @@ export default function CompoundInterestCalculator() {
                 backgroundColor: 'rgba(100, 116, 139, 0.05)',
                 fill: true, tension: 0.4, pointRadius: 3, borderDash: [5, 5],
                 pointBackgroundColor: '#64748b',
+                hidden: !showInterest, // Toggling interest-related data
             },
+            ...(showInterest ? [{
+                label: 'Yearly Interest',
+                data: results.breakdown.map(r => r.yearlyInterest),
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                fill: true, tension: 0.4, pointRadius: 0,
+            }] : []),
             ...(compareMode && compareResults ? [{
                 label: 'Scenario B Balance',
                 data: compareResults.breakdown.map(r => r.balance),
@@ -173,18 +199,24 @@ export default function CompoundInterestCalculator() {
             </section>
 
             <form className="calculator-form" onSubmit={handleCalculate} id="compound-interest-form" noValidate>
+                <div className="form-top-actions">
+                    <button type="button" className="btn-load-example" onClick={loadExample}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        Load Example
+                    </button>
+                </div>
                 <div className="form-grid">
                     <ValidatedInput
-                        name="principal" label="Initial Investment" hint="(USD)"
+                        name="principal" label="Initial Investment"
                         value={inputs.principal} onChange={handleChange} onBlur={handleBlur}
                         error={errors.principal} touched={touched.principal}
-                        prefix="$" min={0} step={100}
+                        prefix={symbol} min={0} step={100}
                     />
                     <ValidatedInput
-                        name="monthly" label="Monthly Contribution" hint="(USD)"
+                        name="monthly" label="Monthly Contribution"
                         value={inputs.monthly} onChange={handleChange} onBlur={handleBlur}
                         error={errors.monthly} touched={touched.monthly}
-                        prefix="$" min={0} step={50}
+                        prefix={symbol} min={0} step={50}
                     />
                     <ValidatedInput
                         name="rate" label="Annual Interest Rate" hint="(%)"
@@ -267,7 +299,15 @@ export default function CompoundInterestCalculator() {
                     )}
 
                     <div className="chart-section">
-                        <h3>Growth Projection</h3>
+                        <div className="chart-header">
+                            <h3>Growth Projection</h3>
+                            <button
+                                className={`chart-toggle ${showInterest ? 'active' : ''}`}
+                                onClick={() => setShowInterest(!showInterest)}
+                            >
+                                {showInterest ? 'Hide Interest' : 'Show Interest'}
+                            </button>
+                        </div>
                         <div className="chart-container">
                             <Line data={lineChartData} options={chartOptions} />
                         </div>
@@ -293,7 +333,7 @@ export default function CompoundInterestCalculator() {
                         </div>
                     </div>
 
-                    <AdSlot type="mid-content" />
+
 
                     <div className="data-table-wrapper">
                         <div className="data-table-header"><h3>Year-by-Year Breakdown</h3></div>
@@ -323,6 +363,13 @@ export default function CompoundInterestCalculator() {
                             Download PDF
                         </button>
                         <ShareButton title="Compound Interest Results" text={`My investment of ${formatCurrency(getNumericValue('principal'))} could grow to ${formatCurrency(results.finalBalance)} in ${inputs.years} years!`} />
+                        <button className="btn-action" onClick={handleCopyLink} type="button">
+                            {copied ? (
+                                <><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg> Copied!</>
+                            ) : (
+                                <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg> Copy Link</>
+                            )}
+                        </button>
                         <button className="btn-action" onClick={() => { setCompareMode(!compareMode); setCompareResults(null); }} type="button">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M21 3l-7 7" /><path d="M3 3l7 7" /></svg>
                             {compareMode ? 'Hide Compare' : 'Compare Scenarios'}
@@ -333,27 +380,61 @@ export default function CompoundInterestCalculator() {
 
             <InternalLinks currentPath="/compound-interest-calculator" />
 
-            <section className="seo-content">
-                <h2>How Does Compound Interest Work?</h2>
-                <p>Compound interest is one of the most powerful concepts in personal finance. Unlike simple interest, which is calculated only on the original principal amount, compound interest is calculated on the initial principal and also on the accumulated interest from previous periods. This creates an exponential growth curve that can turn even modest savings into significant wealth over time.</p>
-                <p>The formula for compound interest is: A = P(1 + r/n)^(nt), where A is the final amount, P is the principal, r is the annual interest rate, n is the number of times interest compounds per year, and t is the number of years. Our calculator adds the complexity of regular monthly contributions, which significantly enhances the growth.</p>
-                <h2>The Power of Starting Early</h2>
-                <p>Time is the most critical factor in compound interest. Consider this: an investor who starts at age 25 and invests $500 per month at 7% annual return until age 65 will accumulate approximately $1.2 million. An investor starting at age 35 with the same parameters will accumulate only about $567,000 — less than half. That's the cost of waiting 10 years.</p>
-                <h2>Monthly Contributions vs. Lump Sum</h2>
-                <p>While lump sum investments have the advantage of maximizing time in the market, regular monthly contributions (also known as dollar-cost averaging) offer their own benefits. By investing a fixed amount regularly, you buy more shares when prices are low and fewer when they're high, potentially reducing the impact of market volatility on your portfolio.</p>
-                <h2>Understanding Investment Returns</h2>
-                <p>The annual interest rate you enter into the calculator represents your expected average annual return. Historical returns vary by asset class: the S&P 500 has averaged approximately 10% per year (about 7% after inflation) over the long term, while bonds typically return 3-5%, and savings accounts currently offer 4-5%.</p>
-                <h2>Tax Considerations</h2>
-                <p>The type of account you invest in significantly impacts your actual returns. Tax-advantaged accounts like 401(k)s and Roth IRAs allow your investments to grow tax-free or tax-deferred, maximizing the compound interest effect.</p>
+            <section className="seo-content" id="seo">
+                <h2>The Comprehensive Guide to Compound Interest</h2>
+                <p>Compound interest is often referred to as the "eighth wonder of the world" by financial experts, and for good reason. Unlike simple interest, which is calculated only on the initial amount of money (the principal), compound interest is calculated on the principal and all of the accumulated interest from previous periods. This means you earn interest on your interest, creating a mathematical snowball effect that can lead to exponential wealth growth over time.</p>
+
+                <h3>How the Compound Interest Formula Works</h3>
+                <p>The standard formula for compound interest is: <strong>A = P(1 + r/n)^(nt)</strong></p>
                 <ul>
-                    <li><strong>Traditional 401(k)/IRA:</strong> Contributions are tax-deductible, but withdrawals are taxed as ordinary income in retirement.</li>
-                    <li><strong>Roth 401(k)/IRA:</strong> Contributions are made with after-tax dollars, but all growth and withdrawals are completely tax-free.</li>
-                    <li><strong>Taxable accounts:</strong> No contribution limits or withdrawal restrictions, but gains are taxed annually.</li>
+                    <li><strong>A:</strong> The final amount of money you'll have.</li>
+                    <li><strong>P:</strong> The principal investment (your starting amount).</li>
+                    <li><strong>r:</strong> The annual interest rate (as a decimal).</li>
+                    <li><strong>n:</strong> The number of times interest is compounded per year.</li>
+                    <li><strong>t:</strong> The number of years the money is invested.</li>
                 </ul>
+                <p>Our calculator simplifies this complex math while also accounting for <strong>monthly contributions</strong>. When you add money regularly, you aren't just letting one lump sum grow; you're constantly feeding the engine, which significantly accelerates the compounding process.</p>
+
+                <h3>The Golden Rule of Wealth: Start Early</h3>
+                <p>Time is the most critical variable in the compounding equation. To understand why, consider two investors: <strong>Investor A</strong> starts at age 25 and invests $500 per month for 10 years, then stops entirely at age 35. <strong>Investor B</strong> waits until age 35 and then invests $500 per month every single month until age 65 (30 years). Even though Investor B contributed three times more money over a much longer period, Investor A will likely end up with more money at retirement because those early dollars had an extra decade to compound. This is known as "time in the market," and it's something you can never get back once it's gone.</p>
+
+                <h3>Understanding the Rule of 72</h3>
+                <p>If you want a quick mental shortcut to understand how compounding affects your money, use the <strong>Rule of 72</strong>. To find out approximately how many years it will take to double your investment, divide 72 by your expected annual interest rate. For example, if you expect an 8% return, your money will double every 9 years (72 ÷ 8 = 9). At a 12% return, it doubles every 6 years. This rule highlights why even a 1% or 2% difference in interest rates can lead to massive differences in final wealth over the long term.</p>
+
+                <h3>Compound Frequency: Why It Matters</h3>
+                <p>Interest can be compounded annually, quarterly, monthly, or even daily. The more frequently interest is calculated and added back to your balance, the faster your money grows. For example, a $10,000 investment at 10% interest for 10 years would yield:</p>
+                <ul>
+                    <li><strong>Annual Compounding:</strong> $25,937</li>
+                    <li><strong>Quarterly Compounding:</strong> $26,850</li>
+                    <li><strong>Monthly Compounding:</strong> $27,070</li>
+                    <li><strong>Daily Compounding:</strong> $27,179</li>
+                </ul>
+                <p>Our calculator defaults to <strong>monthly compounding</strong>, as this is the industry standard for most savings accounts and investment vehicles.</p>
+
+                <h3>Real Returns vs. Nominal Returns</h3>
+                <p>When planning for the future, it's essential to distinguish between nominal returns (the raw number) and real returns (adjusted for inflation). If your investment grows by 8% but inflation is 3%, your "real" purchasing power has only increased by 5%. When using our calculator for long-term retirement planning, many wealth managers recommend using a conservative rate of 6% to 7% to account for future inflation and provide a more realistic picture of what that money will actually buy in 20 or 30 years.</p>
+
+                <h3>Asset Classes and Historical Returns</h3>
+                <p>Where you put your money determines your interest rate. Historically, different asset classes have provided broad ranges of returns:</p>
+                <ul>
+                    <li><strong>Savings Accounts & HYSA:</strong> 0.01% – 5.0% (Safe, liquid, but low growth)</li>
+                    <li><strong>Government Bonds (Treasuries):</strong> 3.0% – 5.0% (Very low risk, keeps pace with inflation)</li>
+                    <li><strong>S&P 500 / Stock Market:</strong> 8.0% – 10.0% (Higher risk, historically the best wealth builder)</li>
+                    <li><strong>Private Real Estate:</strong> 7.0% – 9.0% (Requires more capital and management)</li>
+                </ul>
+                <p>By diversifying your portfolio, you can aim for a higher average rate of return while managing the volatility that comes with compounding in the stock market.</p>
+
+                <h3>Practical Strategies to Maximize Compounding</h3>
+                <p>To get the most out of your financial future, follow these three steps:</p>
+                <ol>
+                    <li><strong>Automate your contributions:</strong> Treat your monthly contribution like a bill that must be paid. Automated transfers ensure you never forget to invest.</li>
+                    <li><strong>Reinvest dividends:</strong> If you're investing in individual stocks or ETFs, ensure you've enabled "Dividend Reinvestment Plans" (DRIP). Cashing out dividends interrupts the compounding cycle.</li>
+                    <li><strong>Avoid "Lifestyle Creep":</strong> As your salary increases, try to increase your monthly contribution rather than just increasing your spending. Even an extra $100 a month can result in tens of thousands of extra dollars over several decades.</li>
+                </ol>
             </section>
 
             <FAQSection faqs={faqs} />
-            <AdSlot type="multiplex" />
+
             <TryNextCalculator currentPath="/compound-interest-calculator" />
         </div>
     );
